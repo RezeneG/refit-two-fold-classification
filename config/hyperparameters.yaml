@@ -1,0 +1,44 @@
+# Hyperparameter configurations for all models
+
+random_seed: 42
+
+random_forest:
+  n_estimators: 100
+  max_depth: 15
+  min_samples_split: 10
+  class_weight: 'balanced'
+  random_state: 42
+  n_jobs: -1
+
+xgboost_baseline:
+  n_estimators: 200
+  learning_rate: 0.1
+  max_depth: 6
+  subsample: 0.8
+  colsample_bytree: 0.8
+  random_state: 42
+  early_stopping_rounds: 10
+
+two_fold:
+  stage1:
+    n_estimators: 200
+    learning_rate: 0.1
+    max_depth: 6
+    subsample: 0.8
+    random_state: 42
+    early_stopping_rounds: 10
+    # scale_pos_weight calculated dynamically based on class imbalance
+  
+  stage2:
+    n_estimators: 200
+    learning_rate: 0.1
+    max_depth: 6
+    subsample: 0.8
+    random_state: 42
+    early_stopping_rounds: 10
+
+data:
+  sampling_rate: '1T'  # 1-minute
+  window_size: 60  # 60 minutes for feature extraction
+  activity_threshold: 15  # Watts
+  train_split: 0.8  # 80% train, 20% test (time-based)
