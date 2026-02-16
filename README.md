@@ -181,6 +181,7 @@ After running `evaluate.py`, you should see results similar to:
 | Freezer | 0.52 | 0.45 | 0.48 | 18.9% |
 
 ### Statistical Significance
+
 McNemar's test comparing Two-fold XGBoost vs. end-to-end XGBoost:
 - χ² = 24.67, p < 0.001
 - **Conclusion**: Two-fold approach significantly outperforms baseline
@@ -208,7 +209,7 @@ models/
 
 ### REFIT Electrical Load Measurement
 - **Source**: Loughborough University, UK
-- **License**: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **License**:CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
 - **Period**: 2013-2015
 - **Households**: 20
 - **Resolution**: 8-second (downsampled to 1-minute)
@@ -317,7 +318,7 @@ ls results/figures/ # Should contain confusion matrix
 ## 📧 Contact
 
 For questions or issues:
-- GitHub Issues: https://github.com/GRezene/refit-two-fold-classification/issues
+- GitHub Issues: https://github.com/RezeneG/refit-two-fold-classification/issues
 
 ---
 
@@ -326,7 +327,7 @@ For questions or issues:
 If you use this code or findings in your research, please cite:
 
 ```bibtex
-@article{student2026benchmarking,
+@article{2415644_benchmarking,
   title={Benchmarking Two-Fold Classification for Zero-Inflated Appliance Detection},
   author={Student, Rezene Ghebrehiwot},
   journal={CSO7013_Machine_Learning_Final Assessment},
