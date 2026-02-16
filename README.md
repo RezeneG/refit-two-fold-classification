@@ -35,15 +35,33 @@ Zero-inflated data—where the target variable contains an abundance of zero val
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/refit-two-fold-classification.git
+git clone https://github.com/RezeneG/refit-two-fold-classification.git
 cd refit-two-fold-classification
 
 # Create virtual environment (optional but recommended)
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# On Windows:
+venv\Scripts\activate
+# On Mac/Linux:
+# source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+```
+
+### Requirements
+The `requirements.txt` file contains:
+```txt
+scikit-learn==1.3.0
+xgboost==2.0.0
+pandas==2.0.0
+numpy==1.24.0
+matplotlib==3.7.0
+seaborn==0.12.0
+scipy==1.10.0
+pyyaml==6.0
+requests==2.31.0
+tqdm==4.65.0
 ```
 
 ### Data Preparation
@@ -135,8 +153,7 @@ All stochastic processes use seed = 42:
 
 ### Environment
 ```bash
-# Exact versions used in experiments
-python==3.10.0
+# Exact package versions used
 scikit-learn==1.3.0
 xgboost==2.0.0
 pandas==2.0.0
@@ -149,8 +166,7 @@ pyyaml==6.0
 
 ### Hardware Tested
 - Intel i5-8250U, 16GB RAM (CPU only)
-- macOS 14 (ARM) via Rosetta 2
-- Ubuntu 22.04 (x86_64)
+- Windows 10/11, macOS 14, Ubuntu 22.04
 
 ---
 
@@ -159,13 +175,11 @@ pyyaml==6.0
 After running `evaluate.py`, you should see results similar to:
 
 ### Main Results Table
-```
-| Model               | Macro F1 | Weighted F1 |
-|--------------------|----------|-------------|
-| Random Forest       | 0.48     | 0.52        |
-| XGBoost (end-to-end)| 0.56     | 0.61        |
-| Two-fold XGBoost    | 0.81     | 0.84        |
-```
+| Model | Macro F1 | Weighted F1 |
+|-------|----------|-------------|
+| Random Forest | 0.48 | 0.52 |
+| XGBoost (end-to-end) | 0.56 | 0.61 |
+| Two-fold XGBoost | 0.81 | 0.84 |
 
 ### Per-Appliance Performance (Two-Fold Model)
 | Appliance | Precision | Recall | F1-score | Frequency |
@@ -179,12 +193,6 @@ After running `evaluate.py`, you should see results similar to:
 | Computer monitor | 0.65 | 0.58 | 0.61 | 8.7% |
 | Fridge | 0.58 | 0.52 | 0.55 | 24.1% |
 | Freezer | 0.52 | 0.45 | 0.48 | 18.9% |
-
-### Statistical Significance
-
-McNemar's test comparing Two-fold XGBoost vs. end-to-end XGBoost:
-- χ² = 24.67, p < 0.001
-- **Conclusion**: Two-fold approach significantly outperforms baseline
 
 ---
 
@@ -201,26 +209,23 @@ models/
 └── stage2_xgboost.json          # ~30MB
 ```
 
-**Total size**: ~140MB (created locally, not uploaded to GitHub)
-
 ---
 
 ## 📝 Dataset Information
 
 ### REFIT Electrical Load Measurement
 - **Source**: Loughborough University, UK
-- **License**:CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
+- **License**: CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
 - **Period**: 2013-2015
 - **Households**: 20
 - **Resolution**: 8-second (downsampled to 1-minute)
-- **Appliances**: 9 categories (kettle, washing machine, dishwasher, fridge, freezer, microwave, television, monitor, lighting)
+- **Appliances**: 9 categories
 - **Class distribution**: 87.3% inactive, 12.7% active
 
 ### Ethical Considerations
 - Data collected with informed consent
 - All identifiers removed
 - Participants anonymized
-- Cannot be used to identify individuals or infer occupancy patterns
 
 ### Citation
 ```bibtex
@@ -237,100 +242,66 @@ models/
 
 ## 🔄 Complete Reproduction Pipeline
 
-To exactly reproduce all results from scratch:
-
 ```bash
 # 1. Fresh environment
 python -m venv reproduce
-source reproduce/bin/activate  # Windows: reproduce\Scripts\activate
+# Windows:
+reproduce\Scripts\activate
+# Mac/Linux:
+# source reproduce/bin/activate
+
+# 2. Install packages
 pip install -r requirements.txt
 
-# 2. Get data
+# 3. Get data
 python data/download_data.py
 # (manually download CSV files as instructed)
 
-# 3. Preprocess
+# 4. Preprocess
 python data/preprocess.py
 
-# 4. Train models (this will create models/ folder)
+# 5. Train models
 python src/train_baseline.py --model random_forest
 python src/train_baseline.py --model xgboost
 python src/train_two_fold.py
 
-# 5. Evaluate (this will create results/ folder)
+# 6. Evaluate
 python src/evaluate.py
-
-# 6. Check outputs
-ls results/tables/  # Should contain CSV files
-ls results/figures/ # Should contain confusion matrix
 ```
 
-**Total runtime**: ~2 hours on standard laptop
-
 ---
 
-## ⚠️ Important Notes
+## ⚠️ Important Notes for Windows Users
 
-### What's in GitHub vs. What's Generated
-
-| Item | In GitHub? | Created By |
-|------|------------|------------|
-| Source code | ✅ Yes | - |
-| requirements.txt | ✅ Yes | - |
-| Raw data CSV files | ❌ No | User downloads |
-| Processed features | ❌ No | preprocess.py |
-| Model files | ❌ No | train_*.py |
-| Results tables | ❌ No | evaluate.py |
-| Figures/plots | ❌ No | evaluate.py |
-
-### Why This Approach
-- **Reproducibility**: Training from scratch proves the code works
-- **Legal compliance**: Dataset license may restrict redistribution
-- **Storage limits**: GitHub has 100MB file size limits
-- **Scientific integrity**: Results should be reproducible, not just reported
-
----
-
-## 🐛 Known Issues / Limitations
-
-1. **Data availability**: REFIT requires registration; automatic download not possible
-2. **Single-dataset focus**: Results may not generalise to all household types
-3. **Feature engineering**: Hand-crafted features may underperform learned representations
-4. **Multi-appliance assumption**: Simplified to single active appliance at a time
-5. **Geographic bias**: UK households only, appliance types may differ internationally
+If you encounter issues with `git clone`, try:
+- Use Git Bash instead of Command Prompt
+- Or download the ZIP directly from GitHub
+- Or ensure you have the latest Git version
 
 ---
 
 ## 📄 License
 
-- **Code**: MIT License (see `LICENSE` file if included)
+- **Code**: MIT License
 - **Dataset**: CC BY 4.0 (as specified by REFIT)
-
----
-
-## 🙏 Acknowledgements
-
-- REFIT project team for making the dataset publicly available
-- Loughborough University for data collection and curation
 
 ---
 
 ## 📧 Contact
 
-For questions or issues:
-- GitHub Issues: https://github.com/RezeneG/refit-two-fold-classification/issues
+GitHub Issues:https://github.com/RezeneG/refit-two-fold-classification/issues
 
 ---
 
 ## 📚 Citation
 
-If you use this code or findings in your research, please cite:
+If you use this code, please cite:
 
 ```bibtex
-@article{2415644_benchmarking,
+@article{rezene2026benchmarking,
   title={Benchmarking Two-Fold Classification for Zero-Inflated Appliance Detection},
-  author={Student, Rezene Ghebrehiwot},
-  journal={CSO7013_Machine_Learning_Final Assessment},
+  author={Rezene, Ghebrehiwot.},
+  journal={CSO7013 Machine Learning Final Assessment},
   year={2026}
 }
 ```
