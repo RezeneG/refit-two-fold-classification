@@ -1,0 +1,7 @@
+Random seed fixed to 42 for all stochastic processes:
+- Data shuffling (if any)
+- Train/validation splits
+- Model initialization
+- Cross-validation folds
+
+This ensures exact reproducibility of all results.
