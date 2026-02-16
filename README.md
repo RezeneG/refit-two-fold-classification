@@ -290,6 +290,7 @@ If you encounter issues with `git clone`, try:
 ## 📧 Contact
 
 GitHub Issues:https://github.com/RezeneG/refit-two-fold-classification/issues
+Email:2415644@live.stmarys.ac.uk
 
 ---
 
