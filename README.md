@@ -14,9 +14,10 @@ Zero-inflated data—where the target variable contains an abundance of zero val
 > *Does a two-fold classification approach achieve higher classification performance on zero‑inflated appliance data than end‑to‑end classifiers?*
 
 ### 📊 Key Results (after fixing preprocessing)
-| Model | Macro F1 |
-|-------|----------|
-| Random Forest | 0.48 ± 0.14 |
+
+| Model                | Macro F1    |
+|----------------------|-------------|
+| Random Forest        | 0.48 ± 0.14 |
 | XGBoost (end-to-end) | 0.56 ± 0.12 |
 | **Two-fold XGBoost** | **0.81 ± 0.08** |
 
@@ -121,6 +122,7 @@ refit-two-fold-classification/
 └── results/                       # Created during evaluation (not in git)
 
 🔧 Reproducibility Guarantees
+
 Fixed random seed: 42 for all stochastic processes (data splitting, model initialisation, etc.).
 
 Temporal split: 80% training (early period), 20% testing (later period) per household – no leakage.
@@ -166,7 +168,7 @@ bibtex
 @article{rezene2026benchmarking,
   title={Benchmarking Two-Fold Classification for Zero-Inflated Appliance Detection},
   author={Rezene, Ghebrehiwot.},
-  journal={CSO7013 Machine_Learning_Final_Assessment},
+  journal={CSO7013 Machine_Learning_Final_Assessment_2415644},
   year={2026},
   note={Code available: https://github.com/RezeneG/refit-two-fold-classification}
 }
