@@ -5,7 +5,6 @@ Assumes raw CSV files are in data/raw/
 
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import TimeSeriesSplit
 import os
 from glob import glob
 from tqdm import tqdm
@@ -15,19 +14,6 @@ warnings.filterwarnings('ignore')
 # Fixed random seed for reproducibility
 RANDOM_SEED = 42
 np.random.seed(RANDOM_SEED)
-
-# Appliance mapping
-APPLIANCES = {
-    'kettle': ['kettle', 'Kettle'],
-    'washing_machine': ['washing machine', 'Washing Machine', 'washer'],
-    'dishwasher': ['dishwasher', 'Dishwasher'],
-    'fridge': ['fridge', 'Fridge', 'refrigerator'],
-    'freezer': ['freezer', 'Freezer'],
-    'microwave': ['microwave', 'Microwave'],
-    'television': ['television', 'TV', 'Television'],
-    'monitor': ['monitor', 'Computer Monitor', 'screen'],
-    'lighting': ['light', 'Lighting', 'lamp']
-}
 
 def load_household(filepath):
     """Load and resample household data to 1-minute intervals."""
@@ -53,7 +39,7 @@ def extract_features(window):
     features['min'] = window.min()
     features['max'] = window.max()
     features['range'] = features['max'] - features['min']
-    features['cv'] = features['std'] / (features['mean'] + 1e-8)  # Coefficient of variation
+    features['cv'] = features['std'] / (features['mean'] + 1e-8)
     
     # Change points
     features['diff_1min'] = window.iloc[-1] - window.iloc[-2] if len(window) > 1 else 0
@@ -66,11 +52,12 @@ def extract_features(window):
     
     return features
 
-def create_features_and_targets(df, aggregate_col='aggregate', appliance_cols=None):
-    """Create feature matrix and target labels."""
-    if appliance_cols is None:
-        appliance_cols = [col for col in df.columns if col != aggregate_col]
-    
+def create_features_and_targets(df, aggregate_col, appliance_cols):
+    """
+    Create feature matrix and target labels.
+    aggregate_col : name of the column containing total house power.
+    appliance_cols : list of column names for individual appliances.
+    """
     features_list = []
     targets_list = []
     timestamps = []
@@ -94,7 +81,7 @@ def create_features_and_targets(df, aggregate_col='aggregate', appliance_cols=No
         features_list.append(feat)
         timestamps.append(df.index[i])
         
-        # Target: which appliance is active (or none)
+        # Determine which appliance is active (if any)
         active_appliances = []
         for app in appliance_cols:
             if df[app].iloc[i] > 15:  # 15W threshold
@@ -105,7 +92,7 @@ def create_features_and_targets(df, aggregate_col='aggregate', appliance_cols=No
         elif len(active_appliances) == 1:
             targets_list.append(active_appliances[0])
         else:
-            # For simplicity, take the one with highest power
+            # Multiple appliances active – choose the one with highest power
             powers = {app: df[app].iloc[i] for app in active_appliances}
             targets_list.append(max(powers, key=powers.get))
     
@@ -115,12 +102,10 @@ def create_features_and_targets(df, aggregate_col='aggregate', appliance_cols=No
     return features_df, targets_series
 
 def main():
-    """Main preprocessing function."""
     print("=" * 60)
     print("REFIT Dataset Preprocessing")
     print("=" * 60)
     
-    # Find raw data files
     raw_files = glob("data/raw/*.csv")
     if not raw_files:
         print("\n❌ No CSV files found in data/raw/")
@@ -129,28 +114,32 @@ def main():
     
     print(f"\nFound {len(raw_files)} household files")
     
-    # Process each household
     all_features = []
     all_targets = []
     household_ids = []
     
-    for i, filepath in enumerate(raw_files[:5]):  # Limit to 5 households for demo
+    for i, filepath in enumerate(raw_files[:5]):  # Process up to 5 households
         print(f"\nProcessing household {i+1}/{min(5, len(raw_files))}: {os.path.basename(filepath)}")
         
         try:
-            # Load data
             df = load_household(filepath)
             
-            # Assume aggregate column is the first power column
-            # This needs adjustment based on actual REFIT schema
-            power_cols = df.select_dtypes(include=[np.number]).columns
-            aggregate_col = power_cols[0]
-            appliance_cols = power_cols[1:6]  # First 5 appliances
+            # Identify columns: look for 'Aggregate' and columns starting with 'Appliance'
+            all_cols = df.columns.tolist()
+            aggregate_col = 'Aggregate' if 'Aggregate' in all_cols else None
+            appliance_cols = [col for col in all_cols if col.startswith('Appliance')]
             
-            # Create features and targets
-            features, targets = create_features_and_targets(
-                df, aggregate_col, appliance_cols
-            )
+            if aggregate_col is None:
+                print(f"  ✗ No 'Aggregate' column found in {filepath}")
+                continue
+            if not appliance_cols:
+                print(f"  ✗ No appliance columns found in {filepath}")
+                continue
+            
+            print(f"  Aggregate column: {aggregate_col}")
+            print(f"  Appliance columns: {appliance_cols}")
+            
+            features, targets = create_features_and_targets(df, aggregate_col, appliance_cols)
             
             all_features.append(features)
             all_targets.append(targets)
@@ -162,13 +151,11 @@ def main():
             print(f"  ✗ Error: {e}")
             continue
     
-    # Combine all households
     if all_features:
         combined_features = pd.concat(all_features)
         combined_targets = pd.concat(all_targets)
         combined_households = pd.Series(household_ids, index=combined_features.index)
         
-        # Save processed data
         os.makedirs("data/processed", exist_ok=True)
         combined_features.to_csv("data/processed/features.csv")
         combined_targets.to_csv("data/processed/targets.csv")
@@ -180,7 +167,7 @@ def main():
         print(f"Total samples: {len(combined_features)}")
         print(f"Feature dimension: {combined_features.shape[1]}")
         print(f"Target classes: {combined_targets.nunique()}")
-        print(f"Class distribution:")
+        print("Class distribution:")
         print(combined_targets.value_counts(normalize=True).head(10))
         print("\nFiles saved to: data/processed/")
     else:

@@ -1,10 +1,12 @@
 """
 Train baseline models (Random Forest, XGBoost) on REFIT data.
+Includes imputation to handle NaN values.
 """
 
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.impute import SimpleImputer
 from sklearn.metrics import f1_score, precision_score, recall_score, confusion_matrix
 import xgboost as xgb
 import joblib
@@ -27,8 +29,14 @@ def load_data():
     return features, targets, households
 
 def train_random_forest(X_train, y_train, X_val, y_val):
-    """Train Random Forest classifier."""
+    """Train Random Forest classifier with imputation."""
     print("\nTraining Random Forest...")
+    
+    # Impute missing values
+    print("  Imputing missing values (strategy='mean')...")
+    imputer = SimpleImputer(strategy='mean')
+    X_train_imputed = imputer.fit_transform(X_train)
+    X_val_imputed = imputer.transform(X_val)
     
     # Calculate class weights
     class_weights = dict(zip(
@@ -45,27 +53,33 @@ def train_random_forest(X_train, y_train, X_val, y_val):
         n_jobs=-1
     )
     
-    model.fit(X_train, y_train)
+    model.fit(X_train_imputed, y_train)
     
     # Validation
-    y_pred = model.predict(X_val)
+    y_pred = model.predict(X_val_imputed)
     f1 = f1_score(y_val, y_pred, average='macro')
     print(f"  Validation macro F1: {f1:.4f}")
     
-    return model
+    return model, imputer  # return imputer to use later if needed
 
 def train_xgboost(X_train, y_train, X_val, y_val):
-    """Train XGBoost classifier."""
+    """Train XGBoost classifier with imputation."""
     print("\nTraining XGBoost...")
+    
+    # Impute missing values
+    print("  Imputing missing values (strategy='mean')...")
+    imputer = SimpleImputer(strategy='mean')
+    X_train_imputed = imputer.fit_transform(X_train)
+    X_val_imputed = imputer.transform(X_val)
     
     # Encode labels
     le = LabelEncoder()
     y_train_enc = le.fit_transform(y_train)
     y_val_enc = le.transform(y_val)
     
-    # Calculate class weights
+    # Calculate class weights (optional for XGBoost)
     class_counts = np.bincount(y_train_enc)
-    scale_pos_weight = class_counts[0] / class_counts[1:]  # Binary for detection
+    scale_pos_weight = class_counts[0] / class_counts[1:] if len(class_counts) > 1 else 1.0
     
     model = xgb.XGBClassifier(
         n_estimators=200,
@@ -80,18 +94,18 @@ def train_xgboost(X_train, y_train, X_val, y_val):
     )
     
     model.fit(
-        X_train, y_train_enc,
-        eval_set=[(X_val, y_val_enc)],
+        X_train_imputed, y_train_enc,
+        eval_set=[(X_val_imputed, y_val_enc)],
         verbose=False
     )
     
     # Validation
-    y_pred_enc = model.predict(X_val)
+    y_pred_enc = model.predict(X_val_imputed)
     y_pred = le.inverse_transform(y_pred_enc)
     f1 = f1_score(y_val, y_pred, average='macro')
     print(f"  Validation macro F1: {f1:.4f}")
     
-    return model, le
+    return model, le, imputer
 
 def main():
     parser = argparse.ArgumentParser()
@@ -129,19 +143,26 @@ def main():
     print(f"Training samples: {len(X_train)}")
     print(f"Validation samples: {len(X_val)}")
     
+    # Quick NaN diagnostic (optional)
+    nan_count_train = X_train.isna().sum().sum()
+    if nan_count_train > 0:
+        print(f"  Warning: Training data contains {nan_count_train} NaN values. Imputation will be applied.")
+    
     # Train model
     if args.model == 'random_forest':
-        model = train_random_forest(X_train, y_train, X_val, y_val)
-        # Save model
+        model, imputer = train_random_forest(X_train, y_train, X_val, y_val)
+        # Save model and imputer
         os.makedirs("models", exist_ok=True)
         joblib.dump(model, "models/random_forest.pkl")
+        joblib.dump(imputer, "models/random_forest_imputer.pkl")
         
     elif args.model == 'xgboost':
-        model, label_encoder = train_xgboost(X_train, y_train, X_val, y_val)
-        # Save model and encoder
+        model, label_encoder, imputer = train_xgboost(X_train, y_train, X_val, y_val)
+        # Save model, encoder, and imputer
         os.makedirs("models", exist_ok=True)
         model.save_model("models/xgboost.json")
         joblib.dump(label_encoder, "models/xgboost_label_encoder.pkl")
+        joblib.dump(imputer, "models/xgboost_imputer.pkl")
     
     print("\n✅ Training complete!")
 
