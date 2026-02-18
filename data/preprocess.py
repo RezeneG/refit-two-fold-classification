@@ -16,7 +16,7 @@ warnings.filterwarnings('ignore')
 RANDOM_SEED = 42
 np.random.seed(RANDOM_SEED)
 
-# Appliance mapping
+# Appliance mapping (not strictly needed, but kept for reference)
 APPLIANCES = {
     'kettle': ['kettle', 'Kettle'],
     'washing_machine': ['washing machine', 'Washing Machine', 'washer'],
@@ -67,9 +67,15 @@ def extract_features(window):
     return features
 
 def create_features_and_targets(df, aggregate_col='aggregate', appliance_cols=None):
-    """Create feature matrix and target labels."""
+    """
+    Create feature matrix and target labels.
+    aggregate_col : name of the column containing total house power.
+    appliance_cols : list of column names for individual appliances.
+    """
     if appliance_cols is None:
-        appliance_cols = [col for col in df.columns if col != aggregate_col]
+        # Assume all numeric columns except the aggregate are appliances
+        all_numeric = df.select_dtypes(include=[np.number]).columns.tolist()
+        appliance_cols = [col for col in all_numeric if col != aggregate_col]
     
     features_list = []
     targets_list = []
@@ -94,10 +100,11 @@ def create_features_and_targets(df, aggregate_col='aggregate', appliance_cols=No
         features_list.append(feat)
         timestamps.append(df.index[i])
         
-        # Target: which appliance is active (or none)
+        # Determine which appliance is active (if any)
         active_appliances = []
         for app in appliance_cols:
-            if df[app].iloc[i] > 15:  # 15W threshold
+            # Use a threshold of 15W to consider appliance ON
+            if df[app].iloc[i] > 15:
                 active_appliances.append(app)
         
         if len(active_appliances) == 0:
@@ -105,7 +112,7 @@ def create_features_and_targets(df, aggregate_col='aggregate', appliance_cols=No
         elif len(active_appliances) == 1:
             targets_list.append(active_appliances[0])
         else:
-            # For simplicity, take the one with highest power
+            # Multiple appliances active – choose the one with highest power
             powers = {app: df[app].iloc[i] for app in active_appliances}
             targets_list.append(max(powers, key=powers.get))
     
@@ -134,18 +141,22 @@ def main():
     all_targets = []
     household_ids = []
     
-    for i, filepath in enumerate(raw_files[:5]):  # Limit to 5 households for demo
+    # Limit to a few households for quick testing; change as needed
+    for i, filepath in enumerate(raw_files[:5]):  # Process up to 5 households
         print(f"\nProcessing household {i+1}/{min(5, len(raw_files))}: {os.path.basename(filepath)}")
         
         try:
             # Load data
             df = load_household(filepath)
             
-            # Assume aggregate column is the first power column
-            # This needs adjustment based on actual REFIT schema
-            power_cols = df.select_dtypes(include=[np.number]).columns
-            aggregate_col = power_cols[0]
-            appliance_cols = power_cols[1:6]  # First 5 appliances
+            # Identify the aggregate column (first power column) and appliance columns
+            power_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+            if not power_cols:
+                print(f"  ✗ No numeric columns found in {filepath}")
+                continue
+            
+            aggregate_col = power_cols[0]   # Usually the first column is total house power
+            appliance_cols = power_cols[1:] # The rest are individual appliances
             
             # Create features and targets
             features, targets = create_features_and_targets(
